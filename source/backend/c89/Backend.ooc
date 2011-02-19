@@ -3,6 +3,7 @@ use oc
 
 import ast/[Module, Node, FuncDecl, Access, Var, Scope, Type,
     Call, StringLit, NumberLit, Statement, Expression, Return]
+import middle/Resolver
 import text/[Opts, EscapeSequence]
 
 import structs/[HashMap, ArrayList, List]
@@ -19,10 +20,63 @@ CallBack: class {
     init: func (=f) {}
 }
 
+Builtin: abstract class extends Var {
+    init: super func
+}
+
+BuiltinIf: class extends Var {
+    cond: Expression
+    body: Scope
+
+    init: func (=cond, =body) {
+	super("ifTrue")
+	global = true
+    }
+
+    setType: func (type: Type) {
+	Exception new("Can't set the type of a builtinif!") throw()
+    }
+
+    getType: func -> Type {
+	fDecl := FuncDecl new()
+	
+	v := Var new("cond")
+	v setType(BaseType new("Bool"))
+	fDecl args put(v name, v)
+
+	if(!body body empty?() && body body last() instanceOf?(Expression)) {
+	    expr := body body last() as Expression 
+	    if(expr getType() != null) {
+		fDecl retType = expr getType() 
+	    }
+	}
+	FuncType new(fDecl)
+    }
+
+}
+
 c89_Backend: class extends Backend {
     
     process: func (module: Module, params: BuildParams) {
         C89Generator new(module, params)
+    }
+
+    resolveAccess: func (acc: Access, task: Task, suggest: Func (Var)) {
+        "resolveAccess(%s) in %s" printfln(acc toString(), class name)
+	if(acc name == "ifTrue") {
+	    "It's an ifTrue! Expr = %s" printfln(acc expr toString())
+	    task walkBackward(|node|
+		if(node instanceOf?(Call)) {
+		    call := node as Call
+		    if(call args size == 1 && call args[0] instanceOf?(FuncDecl)) {
+			"Acc expr type is %s" printfln(acc expr getType() toString())
+			fDecl := call args[0] as FuncDecl
+			suggest(BuiltinIf new(acc expr, fDecl body))
+		    }
+		    true
+		} else false
+	    )
+	}
     }
     
 }
@@ -102,17 +156,25 @@ C89Generator: class extends StackGenerator {
             case acc: Access =>
                 cc := CCall new(acc name)
                 v := acc ref
-                
-                if(v expr) {
-                    "Calling %s, acc ref is %s of type %s" printfln(acc name, v expr toString(), v expr class name)
-                } else {
-                    "Calling %s, acc ref is %s, no expr" printfln(acc name, acc ref toString())
-                }
-                if(!v expr || v expr class != FuncDecl) {
-                    cc fat = true
-                }
-                c args each(|x| cc args add(visitExpr(x)))
-                cc
+               
+		match (v class) {
+		    case BuiltinIf =>
+			bif := v as BuiltinIf
+			cif := CIf new(visitExpr(bif cond))
+			cif body addAll(visitScope(bif body))
+			cif
+		    case =>	 
+			if(v expr) {
+			    "Calling %s, acc ref is %s of type %s" printfln(acc name, v expr toString(), v expr class name)
+			} else {
+			    "Calling %s, acc ref is %s, no expr" printfln(acc name, acc ref toString())
+			}
+			if(!v expr || v expr class != FuncDecl) {
+			    cc fat = true
+			}
+			c args each(|x| cc args add(visitExpr(x)))
+			cc
+		}
             case =>
                 Exception new("Unknown call subject type = " + c subject class name) throw(); null
         }
@@ -233,7 +295,7 @@ C89Generator: class extends StackGenerator {
 	        if(!cstat instanceOf?(CNop)) body add(cstat)
 	    )
         body
-	}
+    }
     
     ctype: func (t: Type) -> CType {
         match t {

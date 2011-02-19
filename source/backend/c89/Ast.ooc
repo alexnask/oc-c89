@@ -120,6 +120,20 @@ CBlock: class extends CStatement {
     }
 }
 
+CIf: class extends CBlock {
+    cond: CExpr
+
+    init: func (=cond) {}
+
+    write: func (w: OcWriter) {
+	w app("if(")
+	cond write(w)
+	w app(") ")
+	super()
+    }
+
+}
+
 CReturn: class extends CStatement {
     expr: CExpr
     
