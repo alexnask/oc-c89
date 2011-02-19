@@ -48,6 +48,13 @@ C89Generator: class extends StackGenerator {
     
         // initialize the source and the stack
         source = CSource new(module fullName)
+	module includes each(|inc|
+	    suffix := inc toLower() endsWith?(".h") ? "" : ".h"
+	    source includes add(match {
+		case inc startsWith?("./") => "\"%s%s\"" format(inc substring(2), suffix)
+		case		       => "<%s%s>" format(inc, suffix)
+	    })
+	)
         push(source)
         visitModule(module)
         "Compiling %s, outpath = %s" printfln(module fullName, params outpath)
