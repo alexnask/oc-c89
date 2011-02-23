@@ -39,9 +39,9 @@ BuiltinIf: class extends Var {
 
     getType: func -> Type {
 	fDecl := FuncDecl new()
-	
-	v := Var new("cond")
-	v setType(BaseType new("Bool"))
+
+	v := Var new("body")
+	v setType(FuncType new(FuncDecl new()))
 	fDecl args put(v name, v)
 
 	if(!body body empty?() && body body last() instanceOf?(Expression)) {
