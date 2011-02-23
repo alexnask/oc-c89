@@ -41,13 +41,16 @@ CSource: class extends CNode {
         
         hw := OcWriter new(FileWriter new(File new(basePath, name + ".h")))
 
-	    define := "__" + name map(|c| c alphaNumeric?() ? c toUpper() : '_') + "__define__"
-	    hw nl(). app("#ifndef "). app(define)
-	    hw nl(). app("#define "). app(define)
+	define := "__" + name map(|c| c alphaNumeric?() ? c toUpper() : '_') + "__define__"
+	hw nl(). app("#ifndef "). app(define)
+	hw nl(). app("#define "). app(define)
         
         writeClosureType(hw)
 
-	    includes each(|i| hw nl(). app("#include "). app(i))
+	includes each(|i| hw nl(). app("#include "). app(i))
+
+	// FIXME: ugly hack, hardcode Bool for now.
+	hw nl(). app("#ifndef Bool"). nl(). app("#define Bool int"). nl(). app("#endif")
         
         types each(|t| t write(hw))
         
