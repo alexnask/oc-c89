@@ -21,13 +21,32 @@ PreprocessorReader: class extends FileReader {
     
 }
 
-HeaderParser: class {
+Header: class {
     
     path: String
     fR: FileReader
-    
+    symbols := HashMap<String, String> new()
+ 
+    find: func (name: String) -> Header {
+	file := File new("/usr/local/include/", name)
+	if(file exists?()) return new(file path)
+	
+	file := File new("/usr/include/", name)
+	if(file exists?()) return new(file path)
+
+	// TODO: what about local includes?
+	cInc := Env get("C_INCLUDE_PATH") 
+	if(cInc) {
+	    file := File new(cInc, name)
+	    if(file exists?()) return new(file path)
+	}
+	
+	null
+    }
+   
     init: func (=path) {
         fR = PreprocessorReader new(path)
+	parse()
     }
     
     parse: func {
@@ -52,7 +71,8 @@ HeaderParser: class {
                             case     => parenCount > 0
                         }
                     ) replaceAll("\n", "")
-                    "[%d] Got symbol %s(%s" printfln(mark, lastId, call)
+                    //"[%d] Got symbol %s(%s" printfln(mark, lastId, call)
+		    symbols put(mark, call)
                 case ';' =>
                     //"[%d] End of line, should probably handle stuff, just skipping for now!" printfln(mark)
                 case '*' =>
@@ -137,9 +157,8 @@ HeaderParser: class {
 
 test: func {
     "Parsing done in %d ms" printfln(Time measure(||
-        //hp := HeaderParser new("/usr/include/stdio.h")
-        hp := HeaderParser new("/usr/include/unistd.h")
-        hp parse()
+        //hp := Header new("/usr/include/stdio.h")
+        hp := Header new("/usr/include/unistd.h")
     ))
 }
 
