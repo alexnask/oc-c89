@@ -1,5 +1,5 @@
 
-import io/FileReader, os/Time
+import io/[File, FileReader], os/[Time, Env], structs/HashMap
 
 PreprocessorReader: class extends FileReader {
     
@@ -27,20 +27,21 @@ Header: class {
     fR: FileReader
     symbols := HashMap<String, String> new()
  
-    find: func (name: String) -> Header {
-	file := File new("/usr/local/include/", name)
+    find: static func (name: String) -> Header {
+	file := File new("/usr/local/include", name)
 	if(file exists?()) return new(file path)
 	
-	file := File new("/usr/include/", name)
+	file = File new("/usr/include", name)
 	if(file exists?()) return new(file path)
 
 	// TODO: what about local includes?
 	cInc := Env get("C_INCLUDE_PATH") 
 	if(cInc) {
-	    file := File new(cInc, name)
+	    file = File new(cInc, name)
 	    if(file exists?()) return new(file path)
 	}
-	
+
+	"Include <%s> not found!" printfln(name)
 	null
     }
    
@@ -72,7 +73,7 @@ Header: class {
                         }
                     ) replaceAll("\n", "")
                     //"[%d] Got symbol %s(%s" printfln(mark, lastId, call)
-		    symbols put(mark, call)
+		    symbols put(lastId, call)
                 case ';' =>
                     //"[%d] End of line, should probably handle stuff, just skipping for now!" printfln(mark)
                 case '*' =>
@@ -91,13 +92,13 @@ Header: class {
                                     "[%d] Aborting on unfinished struct" printfln(mark)
                                     return
                                 }
-                                "[%d] Got type 'struct %s'" printfln(mark, id2)
+                                //"[%d] Got type 'struct %s'" printfln(mark, id2)
                             case =>
                                 //"[%d] Got '%s'" printfln(mark, id)
                         }
                     } else if(c1 whitespace?()) {
                         // skip
-                        "[%d] Skipping whitespace" printfln(fR mark())
+                        //"[%d] Skipping whitespace" printfln(fR mark())
                         fR read(). read()
                     } else {
                         "[%d] Aborting on unknown char '%c', (code %d)" printfln(mark, c1, c1 as Int)
@@ -154,12 +155,3 @@ Header: class {
     
 }
 
-
-test: func {
-    "Parsing done in %d ms" printfln(Time measure(||
-        //hp := Header new("/usr/include/stdio.h")
-        hp := Header new("/usr/include/unistd.h")
-    ))
-}
-
-test()

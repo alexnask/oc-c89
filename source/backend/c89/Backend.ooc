@@ -10,7 +10,7 @@ import structs/[HashMap, ArrayList, List]
 import io/[File, FileWriter]
 
 import frontend/BuildParams
-import Ast, StackGenerator, ../Backend
+import Ast, StackGenerator, ../Backend, headers/HeaderParser
 
 "C89 backend fully loaded!" println()
 
@@ -56,20 +56,21 @@ BuiltinIf: class extends Var {
 }
 
 c89_Backend: class extends Backend {
+    headers: HashMap<String, Header>
     
     process: func (module: Module, params: BuildParams) {
         C89Generator new(module, params)
     }
 
     resolveAccess: func (acc: Access, task: Task, suggest: Func (Var)) {
-        "resolveAccess(%s) in %s" printfln(acc toString(), class name)
+	if(!headers) headers = HashMap<String, Header> new()
+
+	// ifTrue is a built-in conditional
 	if(acc name == "ifTrue") {
-	    "It's an ifTrue! Expr = %s" printfln(acc expr toString())
 	    task walkBackward(|node|
 		if(node instanceOf?(Call)) {
 		    call := node as Call
 		    if(call args size == 1 && call args[0] instanceOf?(FuncDecl)) {
-			"Acc expr type is %s" printfln(acc expr getType() toString())
 			fDecl := call args[0] as FuncDecl
 			suggest(BuiltinIf new(acc expr, fDecl body))
 		    }
@@ -77,6 +78,29 @@ c89_Backend: class extends Backend {
 		} else false
 	    )
 	}
+
+	// get functions from C headers
+	task walkBackward(|node|
+	    this; acc; suggest // workaround powa!
+	    match (node) {
+	    case m: Module => m includes each(|inc|
+		this; acc; suggest // workaround powa
+		header := headers get(inc)
+		if(header == null) {
+		    header = Header find(inc + ".h")
+		    if(header) headers put(inc, header)
+		}
+		if(header != null && header symbols contains?(acc name)) {
+		    "Found function `%s` in header `%s`" printfln(acc name, header path)
+		    v := Var new(acc name)
+		    fd := FuncDecl new()
+		    fd externName = acc name
+		    v expr = fd
+		    suggest(v)
+		}
+	    );	    true
+	    case => false 
+	})
     }
     
 }
