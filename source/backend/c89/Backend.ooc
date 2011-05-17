@@ -1,4 +1,3 @@
-
 use oc
 
 import ast/[Module, Node, FuncDecl, Access, Var, Scope, Type,
@@ -13,6 +12,11 @@ import frontend/BuildParams
 import Ast, StackGenerator, ../Backend, headers/HeaderParser
 
 "C89 backend fully loaded!" println()
+
+/**
+ * This is an experiental C89 backend for the oc compiler. It has its own C
+ * ast, and parses C headers. It's pretty awesome, if you ask me.
+ */
 
 CallBack: class {
     f: Func (Node) -> Object
@@ -30,27 +34,27 @@ BuiltinIf: class extends Var {
 
     init: func (=cond, =body) {
 	super("ifTrue")
-	global = true
+        global = true
     }
 
     setType: func (type: Type) {
-	Exception new("Can't set the type of a builtinif!") throw()
+        Exception new("Can't set the type of a builtinif!") throw()
     }
 
     getType: func -> Type {
-	fDecl := FuncDecl new()
+        fDecl := FuncDecl new()
 
-	v := Var new("body")
-	v setType(FuncType new(FuncDecl new()))
-	fDecl args put(v name, v)
+        v := Var new("body")
+        v setType(FuncType new(FuncDecl new()))
+        fDecl args put(v name, v)
 
-	if(!body body empty?() && body body last() instanceOf?(Expression)) {
-	    expr := body body last() as Expression 
-	    if(expr getType() != null) {
-		fDecl retType = expr getType() 
-	    }
-	}
-	FuncType new(fDecl)
+        if(!body body empty?() && body body last() instanceOf?(Expression)) {
+            expr := body body last() as Expression 
+            if(expr getType() != null) {
+            fDecl retType = expr getType() 
+            }
+        }
+        FuncType new(fDecl)
     }
 
 }
