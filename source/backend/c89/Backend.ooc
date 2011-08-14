@@ -11,8 +11,6 @@ import io/[File, FileWriter]
 import frontend/BuildParams
 import Ast, StackGenerator, ../Backend, headers/HeaderParser
 
-"C89 backend fully loaded!" println()
-
 /**
  * This is an experiental C89 backend for the oc compiler. It has its own C
  * ast, and parses C headers. It's pretty awesome, if you ask me.
