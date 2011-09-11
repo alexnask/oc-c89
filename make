@@ -1,9 +1,4 @@
 #!/bin/bash
-
-echo $0
-
-export OOC_LIBS=..
-
 mkdir -p bin .libs
 
 if [[ ! -e $PREFIX ]]; then
